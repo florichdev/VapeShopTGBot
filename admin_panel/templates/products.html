@@ -1,0 +1,942 @@
+{% extends "base.html" %}
+
+{% block extra_css %}
+<style>
+.search-box {
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
+.search-box i {
+    position: absolute;
+    left: 12px;
+    color: #64748b;
+}
+
+.search-box input {
+    padding: 10px 12px 10px 40px;
+    border: 2px solid #e2e8f0;
+    border-radius: 20px;
+    width: 300px;
+    font-size: 14px;
+    transition: border-color 0.3s ease;
+}
+
+.search-box input:focus {
+    outline: none;
+    border-color: #8b5cf6;
+}
+
+.btn-sync {
+    background: linear-gradient(135deg, #3c3784 0%, #2a265f 100%);
+    color: white;
+    border: none;
+    padding: 0.7rem 1.65rem;
+    border-radius: 20px;
+    cursor: pointer;
+    font-size: 0.95rem;
+    font-weight: 500;
+    transition: all 0.3s ease;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    text-decoration: none;
+}
+
+.btn-sync:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
+}
+
+.category-badge {
+    padding: 4px 8px;
+    border-radius: 12px;
+    font-size: 0.8rem;
+    font-weight: 500;
+    color: white;
+    text-wrap: nowrap;
+}
+
+.category-disposable { background: #3b82f6; }
+.category-hookah { background: #8b5cf6; }
+.category-pod { background: #ec4899; }
+.category-cartridges { background: #f59e0b; }
+.category-snus { background: #84cc16; }
+.category-liquids { background: #06b6d4; }
+.category-tobacco { background: #ef4444; }
+.category-other { background: #64748b; }
+
+.table-container {
+    position: relative;
+    margin-bottom: 2rem;
+    background: white;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    overflow: hidden;
+}
+
+.table-scroll-main {
+    overflow: auto;
+    max-height: 600px;
+}
+
+.data-table {
+    width: 100%;
+    border-collapse: collapse;
+    min-width: 1200px;
+}
+
+.data-table th,
+.data-table td {
+    padding: 1rem 0.75rem;
+    text-align: center;
+    border-bottom: 1px solid #e2e8f0;
+    white-space: nowrap;
+}
+
+.data-table th:nth-child(1),
+.data-table td:nth-child(1) { 
+    width: 60px;
+    min-width: 60px;
+    max-width: 60px;
+}
+
+.data-table th:nth-child(2),
+.data-table td:nth-child(2) { 
+    width: 150px;
+    min-width: 150px;
+    max-width: 150px;
+}
+
+.data-table th:nth-child(3),
+.data-table td:nth-child(3) { 
+    width: 200px;
+    min-width: 200px;
+    max-width: 200px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.data-table th:nth-child(4),
+.data-table td:nth-child(4) { 
+    width: 100px;
+    min-width: 100px;
+    max-width: 100px;
+}
+
+.data-table th:nth-child(5),
+.data-table td:nth-child(5) { 
+    width: 120px;
+    min-width: 120px;
+    max-width: 120px;
+}
+
+.data-table th:nth-child(6),
+.data-table td:nth-child(6) {
+    width: 120px;
+    min-width: 120px;
+    max-width: 120px;
+}
+
+.data-table th:nth-child(7),
+.data-table td:nth-child(7) { 
+    width: 150px;
+    min-width: 150px;
+    max-width: 150px;
+}
+
+.data-table th:nth-child(8),
+.data-table td:nth-child(8) {
+    width: 140px;
+    min-width: 140px;
+    max-width: 140px;
+}
+
+.data-table th:nth-child(9),
+.data-table td:nth-child(9) { 
+    width: 140px;
+    min-width: 140px;
+    max-width: 140px;
+}
+
+.data-table th:nth-child(10),
+.data-table td:nth-child(10) { 
+    width: 200px;
+    min-width: 200px;
+    max-width: 200px;
+}
+
+.status-available {
+    color: #10b981;
+    font-weight: bold;
+    font-size: 0.85em;
+}
+
+.status-unavailable {
+    color: #ef4444;
+    font-weight: bold;
+    font-size: 0.85em;
+}
+
+.status-warning {
+    color: #f59e0b;
+    font-weight: bold;
+    font-size: 0.85em;
+}
+
+.status-inactive {
+    color: #64748b;
+    font-weight: bold;
+    font-size: 0.85em;
+}
+
+.actions {
+    white-space: nowrap;
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+    align-items: center;
+    justify-content: center;
+    min-height: 80px;
+}
+
+.actions .btn-edit,
+.actions .btn-check,
+.actions .btn-toggle {
+    padding: 0.4rem 0.8rem;
+    border-radius: 6px;
+    font-size: 0.75rem;
+    margin: 0;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    width: 100%;
+    justify-content: center;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.actions form {
+    width: 100%;
+    display: flex;
+    justify-content: center;
+}
+
+.actions .btn-toggle {
+    width: 100%;
+}
+
+.btn-check {
+    background: #8b5cf6;
+    color: white;
+    border: none;
+    cursor: pointer;
+}
+
+.btn-check:hover {
+    background: #7c3aed;
+    transform: translateY(-1px);
+}
+
+.btn-edit {
+    background: #10b981;
+    color: white;
+    border: none;
+    cursor: pointer;
+}
+
+.btn-edit:hover {
+    background: #059669;
+    transform: translateY(-1px);
+}
+
+.btn-toggle {
+    background: #f59e0b;
+    color: white;
+    border: none;
+    cursor: pointer;
+}
+
+.btn-toggle:hover {
+    background: #d97706;
+    transform: translateY(-1px);
+}
+
+.external-url {
+    max-width: 150px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.external-url a {
+    color: #3b82f6;
+    text-decoration: none;
+    font-size: 0.85em;
+}
+
+.external-url a:hover {
+    text-decoration: underline;
+}
+
+.data-table th {
+    background: linear-gradient(135deg, #3c3784 0%, #2a265f 100%);
+    color: white;
+    font-weight: 600;
+    font-size: 0.8rem;
+    padding: 0.8rem 0.5rem;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    white-space: nowrap;
+    cursor: pointer;
+}
+
+.data-table th:hover {
+    background: linear-gradient(135deg, #4a458c 0%, #38347a 100%);
+}
+
+.category-group {
+    margin-bottom: 2rem;
+    background: white;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    overflow: hidden;
+}
+
+.group-header {
+    padding: 1rem;
+    background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);
+    color: white;
+    cursor: pointer;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.group-header:hover {
+    background: linear-gradient(135deg, #a78bfa 0%, #8b5cf6 100%);
+}
+
+.group-header i {
+    transition: transform 0.3s ease;
+}
+
+.group-header.collapsed i {
+    transform: rotate(-90deg);
+}
+
+.group-content {
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.3s ease;
+}
+
+.group-content.expanded {
+    max-height: 5000px;
+}
+
+.group-count {
+    background: rgba(255,255,255,0.2);
+    padding: 2px 8px;
+    border-radius: 12px;
+    font-size: 0.8rem;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="header-row">
+    <h2><i class="fas fa-box"></i> Товары</h2>
+    <div style="display: flex; gap: 1rem; align-items: center;">
+        <div class="search-box">
+            <i class="fas fa-search"></i>
+            <input type="text" id="productSearch" placeholder="Поиск товара..." onkeyup="filterProducts()">
+        </div>
+        <a href="{{ url_for('sync_all_products') }}" class="btn-sync">
+            <i class="fas fa-sync-alt"></i> Синхронизировать
+        </a>
+        <button class="btn-primary" onclick="window.productManager.addProduct()">
+            <i class="fas fa-plus"></i> Добавить товар
+        </button>
+    </div>
+</div>
+
+<div id="productsContainer">
+    {% set categories = [
+        {'enum_value': 'DISPOSABLE', 'name': 'Одноразовые вейпы', 'icon': 'fas fa-smoking', 'order': 1},
+        {'enum_value': 'HOOKAH', 'name': 'Электронные кальяны', 'icon': 'fas fa-wind', 'order': 2},
+        {'enum_value': 'POD', 'name': 'POD системы', 'icon': 'fas fa-microchip', 'order': 3},
+        {'enum_value': 'CARTRIDGES', 'name': 'Картриджи', 'icon': 'fas fa-cube', 'order': 4},
+        {'enum_value': 'SNUS', 'name': 'Снюс', 'icon': 'fas fa-cannabis', 'order': 5},
+        {'enum_value': 'LIQUIDS', 'name': 'Жидкости', 'icon': 'fas fa-tint', 'order': 6},
+        {'enum_value': 'TOBACCO', 'name': 'Табак для кальяна', 'icon': 'fas fa-leaf', 'order': 7}
+    ] %}
+    
+    {% for category_info in categories %}
+        {% set category_products = [] %}
+        {% for product in products %}
+            {% if product.category.name == category_info.enum_value %}
+                {% set _ = category_products.append(product) %}
+            {% endif %}
+        {% endfor %}
+        
+        {% if category_products %}
+        <div class="category-group">
+            <div class="group-header" onclick="toggleCategoryGroup(this)">
+                <span>
+                    <i class="{{ category_info.icon }}"></i> {{ category_info.name }}
+                    <span class="group-count">{{ category_products|length }} товаров</span>
+                </span>
+                <i class="fas fa-chevron-down"></i>
+            </div>
+            <div class="group-content">
+                <div class="table-container">
+                    <div class="table-scroll-main">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th onclick="sortTable(0)">ID</th>
+                                    <th>Название</th>
+                                    <th>Описание</th>
+                                    <th>Цена</th>
+                                    <th>Категория</th>
+                                    <th>Ссылка IMG/GIF</th>
+                                    <th>Внешняя ссылка</th>
+                                    <th>Статус</th>
+                                    <th>Проверено</th>
+                                    <th>Действия</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for product in category_products %}
+                                <tr data-product-id="{{ product.id }}"
+                                    data-product-name="{{ product.name }}"
+                                    data-product-description="{{ product.description }}"
+                                    data-product-price="{{ product.price }}"
+                                    data-product-photo="{{ product.photo_gif_id }}"
+                                    data-product-external="{{ product.external_url }}"
+                                    data-product-active="{{ product.is_active }}"
+                                    data-product-category="{{ product.category.name }}">
+                                    
+                                    <td>{{ product.id }}</td>
+                                    <td>{{ product.name }}</td>
+                                    <td title="{{ product.description }}">{{ product.description[:50] }}{% if product.description|length > 50 %}...{% endif %}</td>
+                                    <td>{{ product.price }} руб.</td>
+                                    <td>
+                                        {% if product.category.name == 'DISPOSABLE' %}
+                                            <span class="category-badge category-disposable">Одноразовые</span>
+                                        {% elif product.category.name == 'HOOKAH' %}
+                                            <span class="category-badge category-hookah">Кальяны</span>
+                                        {% elif product.category.name == 'POD' %}
+                                            <span class="category-badge category-pod">POD системы</span>
+                                        {% elif product.category.name == 'CARTRIDGES' %}
+                                            <span class="category-badge category-cartridges">Картриджи</span>
+                                        {% elif product.category.name == 'SNUS' %}
+                                            <span class="category-badge category-snus">Снюс</span>
+                                        {% elif product.category.name == 'LIQUIDS' %}
+                                            <span class="category-badge category-liquids">Жидкости</span>
+                                        {% elif product.category.name == 'TOBACCO' %}
+                                            <span class="category-badge category-tobacco">Табак</span>
+                                        {% else %}
+                                            <span class="category-badge category-other">{{ product.category.name }}</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if product.photo_gif_id %}
+                                            {{ product.photo_gif_id[:20] }}{% if product.photo_gif_id|length > 20 %}...{% endif %}
+                                        {% else %}
+                                            -
+                                        {% endif %}
+                                    </td>
+                                    <td class="external-url">
+                                        {% if product.external_url %}
+                                            <a href="{{ product.external_url }}" target="_blank" title="{{ product.external_url }}">
+                                                {{ product.external_url[:30] }}{% if product.external_url|length > 30 %}...{% endif %}
+                                            </a>
+                                        {% else %}
+                                            -
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if product.external_url %}
+                                            {% if product.is_active %}
+                                                <span class="status-available">В наличии ✓</span>
+                                            {% else %}
+                                                <span class="status-unavailable">Нет в наличии ✗</span>
+                                            {% endif %}
+                                        {% else %}
+                                            {% if product.is_active %}
+                                                <span class="status-warning">Активирован вручную ⚠️</span>
+                                            {% else %}
+                                                <span class="status-inactive">Не проверен 🔄</span>
+                                            {% endif %}
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if product.last_checked %}
+                                            {{ product.last_checked.strftime('%d.%m.%Y %H:%M') }}
+                                        {% else %}
+                                            Никогда
+                                        {% endif %}
+                                    </td>
+                                    <td class="actions">
+                                        <button class="btn-edit" onclick="window.productManager.editProduct('{{ product.id }}')">
+                                            <i class="fas fa-edit"></i> Редактировать
+                                        </button>
+                                        {% if product.external_url %}
+                                        <a href="{{ url_for('check_availability', product_id=product.id) }}" class="btn-check">
+                                            <i class="fas fa-check"></i> Проверить
+                                        </a>
+                                        {% endif %}
+                                        <form action="{{ url_for('toggle_product', product_id=product.id) }}" method="get">
+                                            <button type="submit" class="btn-toggle">
+                                                <i class="fas fa-power-off"></i> {{ 'Деактивировать' if product.is_active else 'Активировать' }}
+                                            </button>
+                                        </form>
+                                        <button class="btn-delete" onclick="deleteProduct('{{ product.id }}')" style="width: 100%;">
+                                            <i class="fas fa-trash"></i> Удалить
+                                        </button>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+    {% endfor %}
+    
+    {% set known_categories = ['DISPOSABLE', 'HOOKAH', 'POD', 'CARTRIDGES', 'SNUS', 'LIQUIDS', 'TOBACCO'] %}
+    {% set other_products = [] %}
+    {% for product in products %}
+        {% if product.category.name not in known_categories %}
+            {% set _ = other_products.append(product) %}
+        {% endif %}
+    {% endfor %}
+    
+    {% if other_products %}
+    <div class="category-group">
+        <div class="group-header" onclick="toggleCategoryGroup(this)">
+            <span>
+                <i class="fas fa-box"></i> Другие категории
+                <span class="group-count">{{ other_products|length }} товаров</span>
+            </span>
+            <i class="fas fa-chevron-down"></i>
+        </div>
+        <div class="group-content">
+            <div class="table-container">
+                <div class="table-scroll-main">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th onclick="sortTable(0)">ID</th>
+                                <th>Название</th>
+                                <th>Описание</th>
+                                <th>Цена</th>
+                                <th>Категория</th>
+                                <th>Ссылка IMG/GIF</th>
+                                <th>Внешняя ссылка</th>
+                                <th>Статус</th>
+                                <th>Проверено</th>
+                                <th>Действия</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for product in other_products %}
+                            <tr data-product-id="{{ product.id }}"
+                                data-product-name="{{ product.name }}"
+                                data-product-description="{{ product.description }}"
+                                data-product-price="{{ product.price }}"
+                                data-product-photo="{{ product.photo_gif_id }}"
+                                data-product-external="{{ product.external_url }}"
+                                data-product-active="{{ product.is_active }}"
+                                data-product-category="{{ product.category.name }}">
+                                
+                                <td>{{ product.id }}</td>
+                                <td>{{ product.name }}</td>
+                                <td title="{{ product.description }}">{{ product.description[:50] }}{% if product.description|length > 50 %}...{% endif %}</td>
+                                <td>{{ product.price }} руб.</td>
+                                <td>
+                                    <span class="category-badge category-other">{{ product.category.name }}</span>
+                                </td>
+                                <td>
+                                    {% if product.photo_gif_id %}
+                                        {{ product.photo_gif_id[:20] }}{% if product.photo_gif_id|length > 20 %}...{% endif %}
+                                    {% else %}
+                                        -
+                                    {% endif %}
+                                </td>
+                                <td class="external-url">
+                                    {% if product.external_url %}
+                                        <a href="{{ product.external_url }}" target="_blank" title="{{ product.external_url }}">
+                                            {{ product.external_url[:30] }}{% if product.external_url|length > 30 %}...{% endif %}
+                                        </a>
+                                    {% else %}
+                                        -
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if product.external_url %}
+                                        {% if product.is_active %}
+                                            <span class="status-available">В наличии ✓</span>
+                                        {% else %}
+                                            <span class="status-unavailable">Нет в наличии ✗</span>
+                                        {% endif %}
+                                    {% else %}
+                                        {% if product.is_active %}
+                                            <span class="status-warning">Активирован вручную ⚠️</span>
+                                        {% else %}
+                                            <span class="status-inactive">Не проверен 🔄</span>
+                                        {% endif %}
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if product.last_checked %}
+                                        {{ product.last_checked.strftime('%d.%m.%Y %H:%M') }}
+                                    {% else %}
+                                        Никогда
+                                    {% endif %}
+                                </td>
+                                <td class="actions">
+                                    <button class="btn-edit" onclick="window.productManager.editProduct('{{ product.id }}')">
+                                        <i class="fas fa-edit"></i> Редактировать
+                                    </button>
+                                    {% if product.external_url %}
+                                    <a href="{{ url_for('check_availability', product_id=product.id) }}" class="btn-check">
+                                        <i class="fas fa-check"></i> Проверить
+                                    </a>
+                                    {% endif %}
+                                    <form action="{{ url_for('toggle_product', product_id=product.id) }}" method="get">
+                                        <button type="submit" class="btn-toggle">
+                                            <i class="fas fa-power-off"></i> {{ 'Деактивировать' if product.is_active else 'Активировать' }}
+                                        </button>
+                                    </form>
+                                    <button class="btn-delete" onclick="deleteProduct('{{ product.id }}')" style="width: 100%;">
+                                        <i class="fas fa-trash"></i> Удалить
+                                    </button>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+<div id="addProductModal" class="modal">
+    <div class="modal-content">
+        <span class="close" onclick="window.productManager.closeModal('addProductModal')">&times;</span>
+        <h3><i class="fas fa-plus"></i> Добавить товар</h3>
+        <form method="POST" action="{{ url_for('add_product') }}">
+            <input type="text" name="name" placeholder="Название товара" required>
+            <textarea name="description" placeholder="Описание товара" required></textarea>
+            <input type="number" step="0.01" name="price" placeholder="Цена" required>
+            <input type="text" name="photo_gif_id" placeholder="Ссылка на изображение (GIF)">
+            <input type="url" name="external_url" placeholder="Ссылка на товар на optom1.ru">
+            <select name="category" required>
+                <option value="" disabled selected>Выберите категорию</option>
+                <option value="DISPOSABLE">Одноразовые вейпы</option>
+                <option value="HOOKAH">Электронные кальяны</option>
+                <option value="POD">POD системы</option>
+                <option value="CARTRIDGES">Картриджи</option>
+                <option value="SNUS">Снюс</option>
+                <option value="LIQUIDS">Жидкости</option>
+                <option value="TOBACCO">Табак для кальяна</option>
+            </select>
+            <label>
+                <input type="checkbox" name="is_active"> Активировать без проверки (не рекомендуется)
+            </label>
+            <button type="submit" class="btn-primary">
+                <i class="fas fa-plus"></i> Добавить
+            </button>
+        </form>
+    </div>
+</div>
+
+<div id="editProductModal" class="modal">
+    <div class="modal-content">
+        <span class="close" onclick="window.productManager.closeModal('editProductModal')">&times;</span>
+        <h3><i class="fas fa-edit"></i> Редактировать товар</h3>
+        <form id="editForm" method="POST" action="{{ url_for('edit_product', product_id=0) }}">
+            <input type="hidden" name="product_id" id="editProductId">
+            <input type="text" name="name" id="editName" placeholder="Название товара" required>
+            <textarea name="description" id="editDescription" placeholder="Описание товара" required></textarea>
+            <input type="number" step="0.01" name="price" id="editPrice" placeholder="Цена" required>
+            <input type="text" name="photo_gif_id" id="editPhoto" placeholder="Ссылка на изображение (GIF)">
+            <input type="url" name="external_url" id="editExternalUrl" placeholder="Ссылка на товар на optom1.ru">
+            <select name="category" id="editCategory" required>
+                <option value="" disabled>Выберите категорию</option>
+                <option value="DISPOSABLE">Одноразовые вейпы</option>
+                <option value="HOOKAH">Электронные кальяны</option>
+                <option value="POD">POD системы</option>
+                <option value="CARTRIDGES">Картриджи</option>
+                <option value="SNUS">Снюс</option>
+                <option value="LIQUIDS">Жидкости</option>
+                <option value="TOBACCO">Табак для кальяна</option>
+            </select>
+            <label>
+                <input type="checkbox" name="is_active" id="editActive"> 
+                <span id="activeLabel">Активировать без проверки</span>
+                <small style="display: block; color: #666; margin-top: 5px;">
+                    ✓ Товар активируется автоматически при указании рабочей ссылки
+                </small>
+            </label>
+            <button type="submit" class="btn-primary">
+                <i class="fas fa-save"></i> Сохранить
+            </button>
+        </form>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function toggleCategoryGroup(header) {
+    const content = header.nextElementSibling;
+    header.classList.toggle('collapsed');
+    content.classList.toggle('expanded');
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    const firstGroup = document.querySelector('.group-header');
+    if (firstGroup) {
+        toggleCategoryGroup(firstGroup);
+    }
+});
+
+let currentSortColumn = 0;
+let sortDirection = 1; 
+
+function filterProducts() {
+    const input = document.getElementById('productSearch');
+    const filter = input.value.toLowerCase();
+    const groups = document.querySelectorAll('.category-group');
+    
+    groups.forEach(group => {
+        const rows = group.querySelectorAll('tbody tr');
+        let groupVisible = false;
+        
+        rows.forEach(row => {
+            const name = row.cells[1].textContent.toLowerCase();
+            const description = row.cells[2].textContent.toLowerCase();
+            const productId = row.cells[0].textContent.toLowerCase();
+            
+            if (name.includes(filter) || description.includes(filter) || productId.includes(filter)) {
+                row.style.display = '';
+                groupVisible = true;
+            } else {
+                row.style.display = 'none';
+            }
+        });
+        
+        group.style.display = groupVisible ? 'block' : 'none';
+        
+        if (groupVisible) {
+            const header = group.querySelector('.group-header');
+            const content = group.querySelector('.group-content');
+            if (header && content) {
+                header.classList.remove('collapsed');
+                content.classList.add('expanded');
+            }
+        }
+    });
+}
+
+function sortTable(columnIndex) {
+    if (columnIndex !== 0) return;
+    
+    const table = document.getElementById('productsTable');
+    const rows = Array.from(table.rows).slice(1);
+    
+    if (currentSortColumn === columnIndex) {
+        sortDirection *= -1;
+    } else {
+        currentSortColumn = columnIndex;
+        sortDirection = 1;
+    }
+    
+    updateSortIndicator(columnIndex);
+    
+    rows.sort((a, b) => {
+        let aValue = a.cells[columnIndex].textContent;
+        let bValue = b.cells[columnIndex].textContent;
+        
+        if (columnIndex === 0) {
+            aValue = parseFloat(aValue) || 0;
+            bValue = parseFloat(bValue) || 0;
+        }
+        
+        if (aValue < bValue) return -1 * sortDirection;
+        if (aValue > bValue) return 1 * sortDirection;
+        return 0;
+    });
+    
+    const tbody = table.tBodies[0];
+    tbody.innerHTML = '';
+    rows.forEach(row => tbody.appendChild(row));
+}
+
+function updateSortIndicator(columnIndex) {
+    const idHeader = document.querySelector('th:nth-child(1)'); 
+    if (idHeader) {
+        let headerText = idHeader.textContent.replace(' ↑', '').replace(' ↓', '').replace(' ↕', '');
+        headerText = headerText.trim();
+        
+        if (columnIndex === 0) {
+            headerText += sortDirection === 1 ? ' ↑' : ' ↓';
+        } else {
+            headerText += ' ↕';
+        }
+        
+        idHeader.innerHTML = headerText;
+    }
+}
+
+window.productManager = {
+    addProduct: function() {
+        document.getElementById('addProductModal').style.display = 'block';
+        document.body.classList.add('modal-open');
+    },
+    
+    editProduct: function(productId) {
+        const row = document.querySelector(`tr[data-product-id="${productId}"]`);
+        if (row) {
+            document.getElementById('editProductId').value = productId;
+            document.getElementById('editName').value = row.dataset.productName;
+            document.getElementById('editDescription').value = row.dataset.productDescription;
+            document.getElementById('editPrice').value = row.dataset.productPrice;
+            document.getElementById('editPhoto').value = row.dataset.productPhoto || '';
+            document.getElementById('editExternalUrl').value = row.dataset.productExternal || ''; 
+            document.getElementById('editActive').checked = row.dataset.productActive === 'True';
+            
+            const categorySelect = document.getElementById('editCategory');
+            const category = row.dataset.productCategory;
+            for (let i = 0; i < categorySelect.options.length; i++) {
+                if (categorySelect.options[i].value === category) {
+                    categorySelect.selectedIndex = i;
+                    break;
+                }
+            }
+            
+            const form = document.getElementById('editForm');
+            form.action = form.action.replace('/0', '/' + productId);
+            
+            document.getElementById('editProductModal').style.display = 'block';
+            document.body.classList.add('modal-open');
+        }
+    },
+    
+    closeModal: function(modalId) {
+        document.getElementById(modalId).style.display = 'none';
+        document.body.classList.remove('modal-open');
+    }
+};
+
+window.addEventListener('click', function(event) {
+    const modals = document.querySelectorAll('.modal');
+    modals.forEach(modal => {
+        if (event.target === modal) {
+            modal.style.display = 'none';
+            document.body.classList.remove('modal-open');
+        }
+    });
+});
+
+document.addEventListener('keydown', function(event) {
+    if (event.key === 'Escape') {
+        const modals = document.querySelectorAll('.modal');
+        modals.forEach(modal => {
+            if (modal.style.display === 'block') {
+                modal.style.display = 'none';
+                document.body.classList.remove('modal-open');
+            }
+        });
+    }
+});
+
+function deleteProduct(productId) {
+    fetch(`/products/delete/${productId}`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            }
+        })
+        .then(response => {
+            if (response.status === 200) {
+                return response.json();
+            } else if (response.status === 404) {
+                throw new Error('Товар не найден');
+            } else if (response.status === 500) {
+                throw new Error('Ошибка сервера');
+            } else {
+                throw new Error('Неизвестная ошибка');
+            }
+        })
+        .then(data => {
+            if (data.success) {
+                const row = document.querySelector(`tr[data-product-id="${productId}"]`);
+                if (row) {
+                    row.remove();
+                    showNotification(data.message, 'success');
+                }
+            } else {
+                showNotification(data.message, 'error');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            showNotification('Ошибка при удалении товара: ' + error.message, 'error');
+        });
+    }
+
+function showNotification(message, type = 'info') {
+    const notification = document.createElement('div');
+    notification.className = `notification ${type}`;
+    notification.textContent = message;
+    notification.style.cssText = `
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        padding: 15px 20px;
+        border-radius: 5px;
+        color: white;
+        z-index: 10000;
+        font-weight: bold;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    `;
+    
+    if (type === 'success') {
+        notification.style.background = '#10b981';
+    } else if (type === 'error') {
+        notification.style.background = '#ef4444';
+    } else {
+        notification.style.background = '#3b82f6';
+    }
+    
+    document.body.appendChild(notification);
+    
+    setTimeout(() => {
+        notification.remove();
+    }, 3000);
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    const idHeader = document.querySelector('th:nth-child(1)');
+    if (idHeader) {
+        idHeader.style.cursor = 'pointer';
+        idHeader.title = 'Кликните для сортировки по ID';
+        idHeader.innerHTML = 'ID ↕';
+    }
+});
+</script>
+{% endblock %}

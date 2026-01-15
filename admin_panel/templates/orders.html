@@ -1,0 +1,648 @@
+{% extends "base.html" %}
+
+{% block extra_css %}
+<style>
+.order-timeline {
+    margin-top: 1rem;
+    padding: 1rem;
+    background: white;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.timeline-item {
+    display: flex;
+    align-items: center;
+    margin-bottom: 0.5rem;
+    padding: 0.5rem;
+    border-left: 3px solid #3c3784;
+    background: #f8fafc;
+}
+
+.timeline-date {
+    font-weight: bold;
+    min-width: 120px;
+    color: #3c3784;
+}
+
+.timeline-status {
+    margin-left: 1rem;
+    padding: 0.25rem 0.5rem;
+    border-radius: 4px;
+    font-size: 0.9rem;
+}
+
+.order-notes {
+    margin-top: 1rem;
+}
+
+.note-form {
+    display: flex;
+    gap: 0.5rem;
+    margin-bottom: 1rem;
+}
+
+.note-form textarea {
+    flex: 1;
+    padding: 0.5rem;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    resize: vertical;
+    min-height: 60px;
+}
+
+.notes-list {
+    max-height: 200px;
+    overflow-y: auto;
+}
+
+.note-item {
+    padding: 0.5rem;
+    margin-bottom: 0.5rem;
+    background: #f8fafc;
+    border-left: 3px solid #10b981;
+    border-radius: 4px;
+}
+
+.note-date {
+    font-size: 0.8rem;
+    color: #64748b;
+}
+
+.tracking-info {
+    background: #fffbeb;
+    padding: 1rem;
+    border-radius: 8px;
+    margin-top: 1rem;
+}
+
+.tracking-form {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+    margin-top: 1rem;
+}
+
+.tracking-form input {
+    padding: 0.5rem;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+}
+
+.order-details-modal .modal-content {
+    max-width: 800px;
+}
+
+.status-history {
+    margin-top: 1rem;
+}
+
+.history-item {
+    padding: 0.5rem;
+    margin-bottom: 0.5rem;
+    background: #f1f5f9;
+    border-radius: 4px;
+    font-size: 0.9rem;
+}
+
+.btn-primary:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+.fa-spin {
+    animation: fa-spin 2s infinite linear;
+}
+
+@keyframes fa-spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+.status-pending { color: #f59e0b; }
+.status-processing { color: #3b82f6; }
+.status-shipped { color: #8b5cf6; }
+.status-delivered { color: #10b981; }
+.status-cancelled { color: #ef4444; }
+
+.search-box {
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
+.search-box i {
+    position: absolute;
+    left: 12px;
+    color: #64748b;
+}
+
+.search-box input {
+    padding: 10px 12px 10px 40px;
+    border: 2px solid #e2e8f0;
+    border-radius: 20px;
+    width: 300px;
+    font-size: 14px;
+    transition: border-color 0.3s ease;
+}
+
+.search-box input:focus {
+    outline: none;
+    border-color: #3c3784;
+}
+
+.delivered-orders-group {
+    margin-top: 2rem;
+    background: white;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    overflow: hidden;
+}
+
+.group-header {
+    padding: 1rem;
+    background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+    color: white;
+    cursor: pointer;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.group-header:hover {
+    background: linear-gradient(135deg, #34d399 0%, #10b981 100%);
+}
+
+.group-header i {
+    transition: transform 0.3s ease;
+}
+
+.group-header.collapsed i {
+    transform: rotate(-90deg);
+}
+
+.group-content {
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.3s ease;
+}
+
+.group-content.expanded {
+    max-height: 5000px;
+}
+
+.group-count {
+    background: rgba(255,255,255,0.2);
+    padding: 2px 8px;
+    border-radius: 12px;
+    font-size: 0.8rem;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="header-row">
+    <h2><i class="fas fa-shopping-cart"></i> Заказы</h2>
+    <div style="display: flex; gap: 1rem; align-items: center;">
+        <div class="search-box">
+            <i class="fas fa-search"></i>
+            <input type="text" id="orderSearch" placeholder="Поиск по пользователям..." onkeyup="filterOrders()">
+        </div>
+    </div>
+</div>
+
+<table class="data-table" id="ordersTable">
+    <thead>
+        <tr>
+            <th>№</th>
+            <th>Пользователь</th>
+            <th>Сумма</th>
+            <th>Статус</th>
+            <th>Трек-номер</th>
+            <th>Адрес</th>
+            <th>Дата создания</th>
+            <th>Действия</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for order in orders if order.status != 'delivered' %}
+        <tr>
+            <td>{{ order.order_number }}</td>
+            <td>User #{{ order.user_id }} (@{{ order.user.username if order.user else 'N/A' }})</td>
+            <td>{{ order.total_amount }} руб.</td>
+            <td>
+                <span class="status-{{ order.status }}">
+                    {% if order.status == 'pending' %}⏳ Ожидает
+                    {% elif order.status == 'processing' %}🔧 Обрабатывается
+                    {% elif order.status == 'shipped' %}🚚 Отправлен
+                    {% elif order.status == 'delivered' %}✅ Доставлен
+                    {% elif order.status == 'cancelled' %}❌ Отменен
+                    {% else %}{{ order.status }}{% endif %}
+                </span>
+            </td>
+            <td>{{ order.tracking_number or '—' }}</td>
+            <td>{{ order.shipping_address or '—' }}</td>
+            <td>{{ order.created_at.strftime('%d.%m.%Y %H:%M') }}</td>
+            <td class="actions">
+                <button class="btn-edit btn-action" onclick="openOrderDetails('{{ order.id }}')">
+                    <i class="fas fa-edit"></i> Детали
+                </button>
+                
+                <form action="{{ url_for('update_order_status', order_id=order.id) }}" method="post" style="display:inline;">
+                    <select name="status" onchange="this.form.submit()" style="padding: 0.25rem; border-radius: 4px; font-size: 0.8rem;">
+                        <option value="pending" {% if order.status=='pending' %}selected{% endif %}>Ожидает</option>
+                        <option value="processing" {% if order.status=='processing' %}selected{% endif %}>Обрабатывается</option>
+                        <option value="shipped" {% if order.status=='shipped' %}selected{% endif %}>Отправлен</option>
+                        <option value="delivered" {% if order.status=='delivered' %}selected{% endif %}>Доставлен</option>
+                        <option value="cancelled" {% if order.status=='cancelled' %}selected{% endif %}>Отменен</option>
+                    </select>
+                </form>
+                
+                <a href="{{ url_for('contact_order_user', order_id=order.id) }}" class="btn-primary btn-action" target="_blank">
+                    <i class="fas fa-comment"></i> Чат
+                </a>
+                
+                <a href="{{ url_for('delete_order', order_id=order.id) }}" class="btn-danger btn-action" onclick="return confirm('Удалить этот заказ?')">
+                    <i class="fas fa-trash"></i> Удалить
+                </a>
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+
+<div class="delivered-orders-group">
+    <div class="group-header" onclick="toggleDeliveredOrders(this)">
+        <span>
+            <i class="fas fa-check-circle"></i> Доставленные заказы
+            <span class="group-count">{{ delivered_orders|length }} заказов</span>
+        </span>
+        <i class="fas fa-chevron-down"></i>
+    </div>
+    <div class="group-content">
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>№</th>
+                    <th>Пользователь</th>
+                    <th>Сумма</th>
+                    <th>Трек-номер</th>
+                    <th>Адрес</th>
+                    <th>Дата создания</th>
+                    <th>Дата доставки</th>
+                    <th>Действия</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for order in delivered_orders %}
+                <tr>
+                    <td>{{ order.order_number }}</td>
+                    <td>User #{{ order.user_id }} (@{{ order.user.username if order.user else 'N/A' }})</td>
+                    <td>{{ order.total_amount }} руб.</td>
+                    <td>{{ order.tracking_number or '—' }}</td>
+                    <td>{{ order.shipping_address or '—' }}</td>
+                    <td>{{ order.created_at.strftime('%d.%m.%Y %H:%M') }}</td>
+                    <td>
+                        {% if order.status_history %}
+                            {% set delivered_date = order.status_history|selectattr('status', 'equalto', 'delivered')|first %}
+                            {{ delivered_date.changed_at.strftime('%d.%m.%Y %H:%M') if delivered_date else '—' }}
+                        {% else %}
+                            —
+                        {% endif %}
+                    </td>
+                    <td class="actions">
+                        <button class="btn-edit btn-action" onclick="openOrderDetails('{{ order.id }}')">
+                            <i class="fas fa-edit"></i> Детали
+                        </button>
+                        <a href="{{ url_for('delete_order', order_id=order.id) }}" class="btn-danger btn-action" onclick="return confirm('Удалить этот заказ?')">
+                            <i class="fas fa-trash"></i> Удалить
+                        </a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<div id="orderDetailsModal" class="modal order-details-modal">
+    <div class="modal-content">
+        <span class="close" onclick="closeModal('orderDetailsModal')">&times;</span>
+        <h3><i class="fas fa-info-circle"></i> Детали заказа #<span id="orderNumber"></span></h3>
+        
+        <div class="order-info">
+            <p><strong>Пользователь:</strong><span id="orderUser"></span></p>
+            <p><strong>Сумма:</strong> <span id="orderAmount"></span> руб.</p>
+            <p><strong>Статус:</strong> <span id="orderStatus"></span></p>
+            <p><strong>Дата создания:</strong> <span id="orderDate"></span></p>
+        </div>
+
+        <div class="tracking-info">
+            <h4><i class="fas fa-truck"></i> Информация о доставке</h4>
+            <form id="trackingForm" method="post">
+                <input type="hidden" name="order_id" id="trackingOrderId">
+                <div class="tracking-form">
+                    <div>
+                        <label>Трек-номер:</label>
+                        <input type="text" name="tracking_number" id="trackingNumber" placeholder="Введите трек-номер">
+                    </div>
+                    <div>
+                        <label>Адрес доставки:</label>
+                        <input type="text" name="shipping_address" id="shippingAddress" placeholder="Адрес почты России">
+                    </div>
+                    <div>
+                        <label>Номер телефона:</label>
+                        <input type="text" name="phone_number" id="phoneNumber" placeholder="Номер телефона клиента">
+                    </div>
+                </div>
+                <button type="submit" class="btn-primary" style="margin-top: 1rem;">
+                    <i class="fas fa-save"></i> Сохранить
+                </button>
+            </form>
+        </div>
+
+        <div class="order-notes">
+            <h4><i class="fas fa-sticky-note"></i> Дополнительная информация</h4>
+            <form id="noteForm" class="note-form">
+                <input type="hidden" name="order_id" id="noteOrderId">
+                <textarea name="note" placeholder="Введите дополнительную информацию от покупателя..." required></textarea>
+                <button type="submit" class="btn-primary">
+                    <i class="fas fa-plus"></i> Добавить
+                </button>
+            </form>
+            <div class="notes-list" id="notesList"></div>
+        </div>
+
+        <div class="status-history">
+            <h4><i class="fas fa-history"></i> История статусов</h4>
+            <div id="statusHistory"></div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function toggleDeliveredOrders(header) {
+    const content = header.nextElementSibling;
+    header.classList.toggle('collapsed');
+    content.classList.toggle('expanded');
+}
+function filterOrders() {
+    const input = document.getElementById('orderSearch');
+    const filter = input.value.toLowerCase();
+    const table = document.getElementById('ordersTable');
+    const rows = table.getElementsByTagName('tr');
+    
+    for (let i = 1; i < rows.length; i++) {
+        const userInfo = rows[i].getElementsByTagName('td')[1].textContent.toLowerCase();
+        const orderNumber = rows[i].getElementsByTagName('td')[0].textContent.toLowerCase();
+        const userId = userInfo.match(/user #(\d+)/i);
+        const userIdText = userId ? userId[1] : '';
+        
+        if (userInfo.includes(filter) || orderNumber.includes(filter) || userIdText.includes(filter)) {
+            rows[i].style.display = '';
+        } else {
+            rows[i].style.display = 'none';
+        }
+    }
+}
+
+async function openOrderDetails(orderId) {
+    try {
+        console.log('Loading order details for ID:', orderId);
+        
+        document.getElementById('orderNumber').textContent = 'Загрузка...';
+        document.getElementById('orderUser').textContent = 'Загрузка...';
+        document.getElementById('orderAmount').textContent = 'Загрузка...';
+        document.getElementById('orderStatus').textContent = 'Загрузка...';
+        document.getElementById('orderDate').textContent = 'Загрузка...';
+        document.getElementById('trackingNumber').value = '';
+        document.getElementById('shippingAddress').value = '';
+        document.getElementById('phoneNumber').value = '';
+        document.getElementById('notesList').innerHTML = '<div class="note-item">Загрузка заметок...</div>';
+        document.getElementById('statusHistory').innerHTML = '<div class="history-item">Загрузка истории...</div>';
+
+        document.getElementById('trackingOrderId').value = orderId;
+        document.getElementById('noteOrderId').value = orderId;
+
+        const response = await fetch('/orders/' + orderId + '/details');
+        
+        if (!response.ok) {
+            const errorText = await response.text();
+            console.error('Server response:', response.status, errorText);
+            throw new Error(`HTTP error ${response.status}: ${errorText}`);
+        }
+        
+        const order = await response.json();
+        console.log('Order data:', order);
+        
+        if (order.error) {
+            throw new Error(order.error);
+        }
+        
+        document.getElementById('orderNumber').textContent = order.order_number || 'N/A';
+        document.getElementById('orderUser').textContent = `User #${order.user_id}`;
+        document.getElementById('orderAmount').textContent = order.total_amount || '0';
+        
+        const statusTranslations = {
+            'pending': '⏳ Ожидает',
+            'processing': '🔧 Обрабатывается', 
+            'shipped': '🚚 Отправлен',
+            'delivered': '✅ Доставлен',
+            'cancelled': '❌ Отменен'
+        };
+        document.getElementById('orderStatus').textContent = statusTranslations[order.status] || order.status || 'N/A';
+        
+        if (order.created_at) {
+            const orderDate = new Date(order.created_at);
+            document.getElementById('orderDate').textContent = orderDate.toLocaleString('ru-RU');
+        } else {
+            document.getElementById('orderDate').textContent = 'N/A';
+        }
+        
+        document.getElementById('trackingNumber').value = order.tracking_number || '';
+        document.getElementById('shippingAddress').value = order.shipping_address || '';
+        document.getElementById('phoneNumber').value = order.phone_number || ''; 
+
+        await loadNotes(orderId);
+        await loadStatusHistory(orderId);
+
+        document.getElementById('orderDetailsModal').style.display = 'block';
+        document.body.classList.add('modal-open');
+        
+    } catch (error) {
+        console.error('Error loading order details:', error);
+        alert('Ошибка загрузки данных заказа: ' + error.message);
+    }
+}
+
+document.getElementById('trackingForm').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    const formData = new FormData(this);
+    const submitButton = this.querySelector('button[type="submit"]');
+    const originalText = submitButton.innerHTML;
+    try {
+        submitButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Сохранение...';
+        submitButton.disabled = true;
+        
+        const phoneNumber = document.getElementById('phoneNumber').value;
+        formData.append('phone_number', phoneNumber);
+        
+        const response = await fetch('/orders/update-tracking', {method: 'POST', body: formData});
+        const result = await response.json();
+        if (result.success) {
+            closeModal('orderDetailsModal');
+            location.reload();
+        } else {
+            throw new Error(result.error || 'Ошибка обновления');
+        }
+    } catch (error) {
+        console.error('Error updating tracking:', error);
+        alert('❌ Ошибка обновления: ' + error.message);
+    } finally {
+        submitButton.innerHTML = originalText;
+        submitButton.disabled = false;
+    }
+});
+
+async function loadNotes(orderId) {
+    try {
+        console.log('Loading notes for order:', orderId);
+        const response = await fetch('/orders/' + orderId + '/notes');
+        
+        if (!response.ok) {
+            throw new Error(`HTTP error ${response.status}`);
+        }
+        
+        const notes = await response.json();
+        console.log('Notes data:', notes);
+        
+        if (notes.error) {
+            throw new Error(notes.error);
+        }
+        
+        const notesList = document.getElementById('notesList');
+        if (Array.isArray(notes) && notes.length > 0) {
+            notesList.innerHTML = notes.map(note => 
+                `<div class="note-item">
+                    <div class="note-text">${note.text || 'Нет текста'}</div>
+                    <div class="note-date">${note.created_at ? new Date(note.created_at).toLocaleString('ru-RU') : 'Неизвестная дата'}</div>
+                </div>`
+            ).join('');
+        } else {
+            notesList.innerHTML = '<div class="note-item">Нет заметок</div>';
+        }
+    } catch (error) {
+        console.error('Error loading notes:', error);
+        document.getElementById('notesList').innerHTML = '<div class="note-item">Ошибка загрузки заметок: ' + error.message + '</div>';
+    }
+}
+
+async function loadStatusHistory(orderId) {
+    try {
+        console.log('Loading status history for order:', orderId);
+        const response = await fetch('/orders/' + orderId + '/status-history');
+        
+        if (!response.ok) {
+            throw new Error(`HTTP error ${response.status}`);
+        }
+        
+        const history = await response.json();
+        console.log('Status history data:', history);
+        
+        if (history.error) {
+            throw new Error(history.error);
+        }
+        
+        const historyContainer = document.getElementById('statusHistory');
+        if (Array.isArray(history) && history.length > 0) {
+            const statusTranslations = {
+                'pending': '⏳ Ожидает',
+                'processing': '🔧 Обрабатывается',
+                'shipped': '🚚 Отправлен', 
+                'delivered': '✅ Доставлен',
+                'cancelled': '❌ Отменен'
+            };
+            historyContainer.innerHTML = history.map(item => 
+                `<div class="history-item">
+                    <strong>${statusTranslations[item.status] || item.status || 'N/A'}</strong> - ${item.changed_at ? new Date(item.changed_at).toLocaleString('ru-RU') : 'Неизвестная дата'}
+                </div>`
+            ).join('');
+        } else {
+            historyContainer.innerHTML = '<div class="history-item">Нет истории статусов</div>';
+        }
+    } catch (error) {
+        console.error('Error loading status history:', error);
+        document.getElementById('statusHistory').innerHTML = '<div class="history-item">Ошибка загрузки истории: ' + error.message + '</div>';
+    }
+}
+
+document.getElementById('noteForm').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    const formData = new FormData(this);
+    const textarea = this.querySelector('textarea');
+    const submitButton = this.querySelector('button[type="submit"]');
+    const originalText = submitButton.innerHTML;
+    try {
+        submitButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Добавление...';
+        submitButton.disabled = true;
+        const response = await fetch('/orders/add-note', {method: 'POST', body: formData});
+        const result = await response.json();
+        if (result.success) {
+            await loadNotes(formData.get('order_id'));
+            textarea.value = '';
+        } else {
+            throw new Error(result.error || 'Ошибка добавления заметки');
+        }
+    } catch (error) {
+        console.error('Error adding note:', error);
+        alert('❌ Ошибка добавления заметки: ' + error.message);
+    } finally {
+        submitButton.innerHTML = originalText;
+        submitButton.disabled = false;
+    }
+});
+
+function closeModal(modalId) {
+    const modal = document.getElementById(modalId);
+    if (modal) {
+        modal.style.display = 'none';
+        document.body.classList.remove('modal-open');
+    }
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    document.addEventListener('click', function(event) {
+        if (event.target.classList.contains('modal')) {
+            closeModal(event.target.id);
+        }
+    });
+
+    document.addEventListener('keydown', function(event) {
+        if (event.key === 'Escape') {
+            const modals = document.querySelectorAll('.modal');
+            modals.forEach(modal => {
+                if (modal.style.display === 'block') {
+                    closeModal(modal.id);
+                }
+            });
+        }
+    });
+
+    const closeButtons = document.querySelectorAll('.close');
+    closeButtons.forEach(btn => {
+        btn.addEventListener('click', function() {
+            const modal = this.closest('.modal');
+            if (modal) {
+                closeModal(modal.id);
+            }
+        });
+    });
+
+    window.openOrderDetails = openOrderDetails;
+    console.log('Order details function initialized');
+});
+</script>
+{% endblock %}

@@ -1,0 +1,205 @@
+{% extends "base.html" %}
+
+{% block extra_css %}
+<style>
+.search-box {
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
+.search-box i {
+    position: absolute;
+    left: 12px;
+    color: #64748b;
+}
+
+.search-box input {
+    padding: 10px 12px 10px 40px;
+    border: 2px solid #e2e8f0;
+    border-radius: 20px;
+    width: 300px;
+    font-size: 14px;
+    transition: border-color 0.3s ease;
+}
+
+.search-box input:focus {
+    outline: none;
+    border-color: #3c3784;
+}
+
+.user-group {
+    margin-bottom: 1rem;
+    background: white;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    overflow: hidden;
+}
+
+.group-header {
+    padding: 1rem;
+    background: linear-gradient(135deg, #3c3784 0%, #2a265f 100%);
+    color: white;
+    cursor: pointer;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.group-header:hover {
+    background: linear-gradient(135deg, #4a458c 0%, #38347a 100%);
+}
+
+.group-header i {
+    transition: transform 0.3s ease;
+}
+
+.group-header.collapsed i {
+    transform: rotate(-90deg);
+}
+
+.group-content {
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.3s ease;
+}
+
+.group-content.expanded {
+    max-height: 5000px;
+}
+
+.group-count {
+    background: rgba(255,255,255,0.2);
+    padding: 2px 8px;
+    border-radius: 12px;
+    font-size: 0.8rem;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="header-row">
+    <h2><i class="fas fa-users"></i> Пользователи</h2>
+    <div style="display: flex; gap: 1rem; align-items: center;">
+        <div class="search-box">
+            <i class="fas fa-search"></i>
+            <input type="text" id="userSearch" placeholder="Поиск пользователя..." onkeyup="filterUsers()">
+        </div>
+    </div>
+</div>
+
+<div id="usersContainer">
+    {% for date, user_group in users|groupby('created_at_date') %}
+    <div class="user-group">
+        <div class="group-header" onclick="toggleGroup(this)">
+            <span>
+                <i class="fas fa-calendar"></i> {{ date }} 
+                <span class="group-count">{{ user_group|length }} пользователей</span>
+            </span>
+            <i class="fas fa-chevron-down"></i>
+        </div>
+        <div class="group-content">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>User</th>
+                        <th>Имя</th>
+                        <th>Баланс</th>
+                        <th>Заказы</th>
+                        <th>Статус</th>
+                        <th>Зарегистрирован</th>
+                        <th>Действия</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for user in user_group %}
+                    <tr>
+                        <td>{{ user.id }}</td>
+                        <td>@{{ user.username or 'N/A' }}</td>
+                        <td>{{ user.first_name }}</td>
+                        <td>{{ user.balance }} руб.</td>
+                        <td>{{ user.orders_count }}</td>
+                        <td>
+                            {% if user.is_banned %}
+                                <span class="status-banned">Заблокирован</span>
+                            {% else %}
+                                <span class="status-active">Активен</span>
+                            {% endif %}
+                        </td>
+                        <td>{{ user.created_at.strftime('%d.%m.%Y %H:%M') }}</td>
+                        <td class="actions">
+                            {% if user.is_banned %}
+                                <form action="{{ url_for('toggle_user', user_id=user.id) }}" method="post" style="display:inline;">
+                                    <button type="submit" class="btn-toggle">
+                                        <i class="fas fa-unlock"></i> Разблокировать
+                                    </button>
+                                </form>
+                            {% else %}
+                                <form action="{{ url_for('toggle_user', user_id=user.id) }}" method="post" style="display:inline;">
+                                    <button type="submit" class="btn-toggle">
+                                        <i class="fas fa-ban"></i> Заблокировать
+                                    </button>
+                                </form>
+                            {% endif %}
+                            
+                            <form action="{{ url_for('add_user_balance', user_id=user.id) }}" method="post" style="display:inline; margin-left: 10px;">
+                                <input type="number" name="amount" placeholder="Сумма" min="0" step="0.01" required style="width: 80px; padding: 0.25rem;">
+                                <button type="submit" class="btn-primary" style="padding: 0.25rem 0.5rem;">
+                                    <i class="fas fa-plus"></i> Баланс
+                                </button>
+                            </form>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function toggleGroup(header) {
+    const content = header.nextElementSibling;
+    header.classList.toggle('collapsed');
+    content.classList.toggle('expanded');
+}
+
+function filterUsers() {
+    const input = document.getElementById('userSearch');
+    const filter = input.value.toLowerCase();
+    const groups = document.querySelectorAll('.user-group');
+    
+    groups.forEach(group => {
+        const rows = group.querySelectorAll('tbody tr');
+        let groupVisible = false;
+        
+        rows.forEach(row => {
+            const username = row.cells[1].textContent.toLowerCase();
+            const firstName = row.cells[2].textContent.toLowerCase();
+            const userId = row.cells[0].textContent.toLowerCase();
+            
+            if (username.includes(filter) || firstName.includes(filter) || userId.includes(filter)) {
+                row.style.display = '';
+                groupVisible = true;
+            } else {
+                row.style.display = 'none';
+            }
+        });
+        
+        group.style.display = groupVisible ? 'block' : 'none';
+    });
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    const firstGroup = document.querySelector('.group-header');
+    if (firstGroup) {
+        toggleGroup(firstGroup);
+    }
+});
+</script>
+{% endblock %}

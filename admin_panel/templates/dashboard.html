@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="header-row">
+    <h2><i class="fas fa-tachometer-alt"></i> Главная панель</h2>
+</div>
+
+<div class="stats-grid">
+    <div class="stat-card">
+        <h3><i class="fas fa-users"></i> Пользователи</h3>
+        <p class="stat-number">{{ stats.total_users }}</p>
+    </div>
+    <div class="stat-card">
+        <h3><i class="fas fa-box"></i> Товары</h3>
+        <p class="stat-number">{{ stats.total_products }}</p>
+    </div>
+    <div class="stat-card">
+        <h3><i class="fas fa-shopping-cart"></i> Заказы</h3>
+        <p class="stat-number">{{ stats.total_orders }}</p>
+    </div>
+    <div class="stat-card">
+        <h3><i class="fas fa-clock"></i> Ожидают обработки</h3>
+        <p class="stat-number">{{ stats.pending_orders }}</p>
+    </div>
+</div>
+
+<div class="quick-actions">
+    <h3><i class="fas fa-bolt"></i> Быстрые действия</h3>
+    <div class="action-buttons">
+        <a href="{{ url_for('products') }}" class="btn-primary">
+            <i class="fas fa-box"></i> Управление товарами
+        </a>
+        <a href="{{ url_for('orders') }}" class="btn-primary">
+            <i class="fas fa-shopping-cart"></i> Просмотр заказов
+        </a>
+        <a href="{{ url_for('users') }}" class="btn-primary">
+            <i class="fas fa-users"></i> Управление пользователями
+        </a>
+    </div>
+</div>
+{% endblock %}
